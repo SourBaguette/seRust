@@ -22,13 +22,40 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    fn chop(&mut self, n: usize) -> &'a [char] {
+        let token = &self.content[0..n];
+        self.content = &self.content[n..];
+        return token;
+    }
+
+    fn chop_while<P>(&mut self, mut predicate: P) -> &'a [char]
+    where
+        P: FnMut(&char) -> bool,
+    {
+        let mut n = 0;
+        while n < self.content.len() && predicate(&self.content[n]) {
+            n += 1;
+        }
+        return self.chop(n);
+    }
+
     fn next_token(&mut self) -> Option<&'a [char]> {
         self.trim_left();
         // trim white spaces from the left
         if self.content.len() == 0 {
             return None;
         }
-        todo!()
+
+        if self.content[0].is_numeric() {
+            return Some(self.chop_while(|x| x.is_numeric()));
+        }
+
+        if self.content[0].is_alphabetic() {
+            return Some(self.chop_while(|x| x.is_alphanumeric()));
+        }
+
+        // Handling special characters
+        return Some(self.chop(1));
     }
 }
 
@@ -51,6 +78,7 @@ fn read_entire_xml_file<P: AsRef<Path>>(file_path: P) -> io::Result<String> {
     for event in er.into_iter() {
         if let XmlEvent::Characters(text) = event.expect("TODO") {
             content.push_str(&text);
+            content.push_str(" ");
         }
     }
     Ok(content)
@@ -62,7 +90,13 @@ fn main() -> io::Result<()> {
         .collect::<Vec<_>>();
 
     for token in Lexer::new(&content) {
-        println!("{token:?}");
+        println!(
+            "{token:?}",
+            token = token
+                .iter()
+                .map(|x| x.to_ascii_uppercase())
+                .collect::<String>()
+        );
     }
     // let all_documents = HashMap::<Path, HashMap<String, usize>>::new();
 
