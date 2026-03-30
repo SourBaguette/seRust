@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use xml::reader::{EventReader, XmlEvent};
 
 #[derive(Debug)]
@@ -84,28 +84,49 @@ fn read_entire_xml_file<P: AsRef<Path>>(file_path: P) -> io::Result<String> {
     Ok(content)
 }
 
-fn main() -> io::Result<()> {
-    let content = read_entire_xml_file("docs.gl/gl4/glVertexAttribDivisor.xhtml")?
-        .chars()
-        .collect::<Vec<_>>();
+type TermFreq = HashMap<String, usize>;
+type TermFreqIndex = HashMap<PathBuf, TermFreq>;
 
-    for token in Lexer::new(&content) {
-        println!(
-            "{token:?}",
-            token = token
+fn main() -> io::Result<()> {
+    let dir_path = "docs.gl/gl4";
+    let dir = fs::read_dir(dir_path)?;
+    let top_n = 20;
+    let mut tf_index = TermFreqIndex::new();
+
+    for file in dir {
+        let file_path = file?.path();
+
+        println!("Indexing {:?}..", &file_path);
+
+        let content = read_entire_xml_file(&file_path)?
+            .chars()
+            .collect::<Vec<_>>();
+
+        let mut tf = TermFreq::new();
+
+        for token in Lexer::new(&content) {
+            let term = token
                 .iter()
                 .map(|x| x.to_ascii_uppercase())
-                .collect::<String>()
-        );
-    }
-    // let all_documents = HashMap::<Path, HashMap<String, usize>>::new();
+                .collect::<String>();
 
-    // let dir_path = "docs.gl/gl4";
-    // let dir = fs::read_dir(dir_path)?;
-    // for file in dir {
-    //     let file_path = file?.path();
-    //     let content = read_entire_xml_file(&file_path)?;
-    //     println!("{file_path:?} => {size}", size = content.len());
-    // }
+            if let Some(freq) = tf.get_mut(&term) {
+                *freq += 1;
+            } else {
+                tf.insert(term, 1);
+            }
+        }
+
+        let mut stats = tf.iter().collect::<Vec<_>>();
+        stats.sort_by_key(|(_, f)| *f);
+        stats.reverse();
+
+        tf_index.insert(file_path, tf);
+    }
+
+    for (path, tf) in tf_index {
+        println!("{path:?} has {count} unique tokens", count = tf.len());
+    }
+
     Ok(())
 }
