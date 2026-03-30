@@ -1,3 +1,4 @@
+use serde_json;
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io;
@@ -124,9 +125,10 @@ fn main() -> io::Result<()> {
         tf_index.insert(file_path, tf);
     }
 
-    for (path, tf) in tf_index {
-        println!("{path:?} has {count} unique tokens", count = tf.len());
-    }
+    let index_path = "index.json";
+    println!("Saving {index_path}...");
+    let index_file = File::create(index_path)?;
+    serde_json::to_writer(index_file, &tf_index).expect("serde works fine");
 
     Ok(())
 }
