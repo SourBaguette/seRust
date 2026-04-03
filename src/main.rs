@@ -4,6 +4,7 @@ use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::result::Result;
+use tiny_http::{Header, Response, Server};
 use xml::common::{Position, TextPosition};
 use xml::reader::{EventReader, XmlEvent};
 
@@ -192,6 +193,7 @@ fn usage(program: &str) {
         "    index <folder>         index the <folder> and save the index to index.json file"
     );
     eprintln!("    search <index-file>    check how many documents are indexed in the file (searching is not implemented yet)");
+    eprintln!("    serve  [address]       start local HTTP server with Web Interface");
 }
 
 fn entry() -> Result<(), ()> {
@@ -221,6 +223,45 @@ fn entry() -> Result<(), ()> {
             })?;
 
             check_index(&index_path)?;
+        }
+        "serve" => {
+            let address = args.next().unwrap_or("127.0.0.1:6969".to_string());
+
+            let server = Server::http(&address).map_err(|err| {
+                eprintln!("ERROR: could not start HTTP server at {address}: {err}");
+            })?;
+
+            println!("INFO: listening at http://{address}/");
+
+            for request in server.incoming_requests() {
+                println!(
+                    "received request! method: {:?}, url: {:?}",
+                    request.method(),
+                    request.url()
+                );
+                let content_type_text_html = "text/html; charset=utf-8";
+                let response = Response::from_string(
+                    r#"
+                    <html>
+                        <head>
+                            <title>SeRust</title>
+                        </head>
+                        <body>
+                            <h1>Hello, World</h1>
+                        </body>
+                    </html>
+                "#,
+                )
+                .with_header(
+                    Header::from_bytes("Content-Type", content_type_text_html)
+                        .expect("That we didn't put any garbage in the headers"),
+                );
+                request.respond(response).unwrap_or_else(|err| {
+                    eprintln!("ERROR: could not serve a request: {err}");
+                });
+            }
+
+            todo!("not implemented");
         }
         _ => {
             usage(&program);
