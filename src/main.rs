@@ -4,7 +4,7 @@ use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::result::Result;
-use tiny_http::{Header, Request, Response, Server};
+use tiny_http::{Header, Method, Request, Response, Server, StatusCode};
 use xml::common::{Position, TextPosition};
 use xml::reader::{EventReader, XmlEvent};
 
@@ -196,24 +196,43 @@ fn usage(program: &str) {
     eprintln!("    serve  [address]       start local HTTP server with Web Interface");
 }
 
+fn serve_static_file(request: Request, file_path: &str, content_type: &str) -> Result<(), ()> {
+    let content_type_header = Header::from_bytes("Content-Type", content_type)
+        .expect("That we didn't put any garbage in the headers");
+    let file = File::open(file_path).map_err(|err| {
+        eprintln!("ERROR: could not serve file {file_path}: {err}");
+    })?;
+    let response = Response::from_file(file).with_header(content_type_header);
+    request.respond(response).map_err(|err| {
+        eprintln!("ERROR: could not serve a static file {file_path}: {err}");
+    })
+}
+
+fn serve_404(request: Request) -> Result<(), ()> {
+    request
+        .respond(Response::from_string("404").with_status_code(StatusCode(404)))
+        .map_err(|err| {
+            eprintln!("ERROR: could not serve a request: {err}");
+        })
+}
+
 fn serve_request(request: Request) -> Result<(), ()> {
     println!(
         "INFO: received request! method: {:?}, url: {:?}",
         request.method(),
         request.url()
     );
-    let content_type_text_html = "text/html; charset=utf-8";
-    let index_html_path = "index.html";
-    let index_html_file = File::open(index_html_path).map_err(|err| {
-        eprintln!("ERROR: could not serve file {index_html_path}: {err}");
-    })?;
-    let response = Response::from_file(index_html_file).with_header(
-        Header::from_bytes("Content-Type", content_type_text_html)
-            .expect("That we didn't put any garbage in the headers"),
-    );
-    request.respond(response).map_err(|err| {
-        eprintln!("ERROR: could not serve a request: {err}");
-    })?;
+
+    match (request.method(), request.url()) {
+        (Method::Get, "/index.js") => {
+            serve_static_file(request, "index.js", "text/javascript; charset=utf-8")?;
+        }
+        (Method::Get, "/") | (Method::Get, "/index.html") => {
+            serve_static_file(request, "index.html", "text/html; charset=utf-8")?;
+        }
+        _ => serve_404(request)?,
+    }
+
     Ok(())
 }
 
