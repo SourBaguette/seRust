@@ -4,7 +4,7 @@ use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::result::Result;
-use tiny_http::{Header, Response, Server};
+use tiny_http::{Header, Request, Response, Server};
 use xml::common::{Position, TextPosition};
 use xml::reader::{EventReader, XmlEvent};
 
@@ -196,6 +196,27 @@ fn usage(program: &str) {
     eprintln!("    serve  [address]       start local HTTP server with Web Interface");
 }
 
+fn serve_request(request: Request) -> Result<(), ()> {
+    println!(
+        "INFO: received request! method: {:?}, url: {:?}",
+        request.method(),
+        request.url()
+    );
+    let content_type_text_html = "text/html; charset=utf-8";
+    let index_html_path = "index.html";
+    let index_html_file = File::open(index_html_path).map_err(|err| {
+        eprintln!("ERROR: could not serve file {index_html_path}: {err}");
+    })?;
+    let response = Response::from_file(index_html_file).with_header(
+        Header::from_bytes("Content-Type", content_type_text_html)
+            .expect("That we didn't put any garbage in the headers"),
+    );
+    request.respond(response).map_err(|err| {
+        eprintln!("ERROR: could not serve a request: {err}");
+    })?;
+    Ok(())
+}
+
 fn entry() -> Result<(), ()> {
     let mut args = env::args();
     let program = args.next().expect("path to program is provided");
@@ -234,31 +255,7 @@ fn entry() -> Result<(), ()> {
             println!("INFO: listening at http://{address}/");
 
             for request in server.incoming_requests() {
-                println!(
-                    "received request! method: {:?}, url: {:?}",
-                    request.method(),
-                    request.url()
-                );
-                let content_type_text_html = "text/html; charset=utf-8";
-                let response = Response::from_string(
-                    r#"
-                    <html>
-                        <head>
-                            <title>SeRust</title>
-                        </head>
-                        <body>
-                            <h1>Hello, World</h1>
-                        </body>
-                    </html>
-                "#,
-                )
-                .with_header(
-                    Header::from_bytes("Content-Type", content_type_text_html)
-                        .expect("That we didn't put any garbage in the headers"),
-                );
-                request.respond(response).unwrap_or_else(|err| {
-                    eprintln!("ERROR: could not serve a request: {err}");
-                });
+                serve_request(request)?;
             }
 
             todo!("not implemented");
