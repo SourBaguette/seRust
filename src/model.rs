@@ -1,3 +1,4 @@
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -6,7 +7,8 @@ pub type TermFreq = HashMap<String, usize>;
 pub type DocFreq = HashMap<String, usize>;
 pub type TermFreqPerDoc = HashMap<PathBuf, TermFreq>;
 
-struct Model {
+#[derive(Deserialize)]
+pub struct Model {
     tfpd: TermFreqPerDoc,
     df: DocFreq,
 }
@@ -86,13 +88,13 @@ impl<'a> Iterator for Lexer<'a> {
     }
 }
 
-pub fn search_query<'a>(tf_index: &'a TermFreqPerDoc, query: &'a [char]) -> Vec<(&'a Path, f32)> {
+pub fn search_query<'a>(model: &'a Model, query: &'a [char]) -> Vec<(&'a Path, f32)> {
     let mut result = Vec::<(&Path, f32)>::new();
     let tokens = Lexer::new(&query).collect::<Vec<_>>();
-    for (path, tf_table) in tf_index {
+    for (path, tf_table) in &model.tfpd {
         let mut rank = 0f32;
         for token in &tokens {
-            rank += tf(&token, &tf_table) * idf(&token, &tf_index);
+            rank += tf(&token, &tf_table) * idf(&token, &model.tfpd);
         }
         result.push((path, rank));
     }

@@ -159,11 +159,11 @@ fn entry() -> Result<(), ()> {
                 eprintln!("ERROR: could not open index file {index_path}: {err}");
             })?;
 
-            let tf_index: TermFreqPerDoc = serde_json::from_reader(index_file).map_err(|err| {
+            let model: Model = serde_json::from_reader(index_file).map_err(|err| {
                 eprintln!("ERROR: could not parse index file {index_path}: {err}");
             })?;
 
-            for (path, rank) in search_query(&tf_index, &prompt).iter().take(20) {
+            for (path, rank) in search_query(&model, &prompt).iter().take(20) {
                 println!("{path} {rank}", path = path.display());
             }
 
@@ -179,13 +179,13 @@ fn entry() -> Result<(), ()> {
                 eprintln!("ERROR: could not open index file {index_path}: {err}");
             })?;
 
-            let tf_index: TermFreqPerDoc = serde_json::from_reader(index_file).map_err(|err| {
+            let model: Model = serde_json::from_reader(index_file).map_err(|err| {
                 eprintln!("ERROR: could not parse index file {index_path}: {err}");
             })?;
 
             let address = args.next().unwrap_or("127.0.0.1:6969".to_string());
 
-            server::start(&address, &tf_index)
+            server::start(&address, &model)
         }
         _ => {
             usage(&program);
