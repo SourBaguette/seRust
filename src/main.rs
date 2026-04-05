@@ -40,21 +40,21 @@ fn parse_entire_xml_file(file_path: &Path) -> Result<String, ()> {
 }
 
 // TODO: Use sqlite3 to store the index
-fn save_tf_index(tf_index: &TermFreqPerDoc, index_path: &str) -> Result<(), ()> {
+fn save_model_as_json(model: &Model, index_path: &str) -> Result<(), ()> {
     println!("Saving {index_path}...");
 
     let index_file = File::create(index_path).map_err(|err| {
         eprintln!("ERROR: could not create index file {index_path}: {err}");
     })?;
 
-    serde_json::to_writer(BufWriter::new(index_file), &tf_index).map_err(|err| {
+    serde_json::to_writer(BufWriter::new(index_file), &model).map_err(|err| {
         eprintln!("ERROR: could not serialize index into file {index_path}: {err}");
     })?;
 
     Ok(())
 }
 
-fn tf_index_of_folder(dir_path: &Path, tf_index: &mut TermFreqPerDoc) -> Result<(), ()> {
+fn add_folder_to_model(dir_path: &Path, model: &mut Model) -> Result<(), ()> {
     let dir = fs::read_dir(dir_path).map_err(|err| {
         eprintln!(
             "ERROR: could not open directory {dir_path} for indexing: {err}",
@@ -80,7 +80,7 @@ fn tf_index_of_folder(dir_path: &Path, tf_index: &mut TermFreqPerDoc) -> Result<
         })?;
 
         if file_type.is_dir() {
-            tf_index_of_folder(&file_path, tf_index)?;
+            add_folder_to_model(&file_path, model)?;
             continue 'next_file;
         }
 
@@ -103,7 +103,7 @@ fn tf_index_of_folder(dir_path: &Path, tf_index: &mut TermFreqPerDoc) -> Result<
             }
         }
 
-        tf_index.insert(file_path, tf);
+        model.tfpd.insert(file_path, tf);
     }
 
     Ok(())
@@ -135,10 +135,9 @@ fn entry() -> Result<(), ()> {
                 eprintln!("ERROR: no directory is provided for {subcommand} subcommand");
             })?;
 
-            let mut tf_index = TermFreqPerDoc::new();
-            tf_index_of_folder(Path::new(&dir_path), &mut tf_index)?;
-
-            save_tf_index(&tf_index, "index.json")
+            let mut model = Default::default();
+            add_folder_to_model(Path::new(&dir_path), &mut model)?;
+            save_model_as_json(&model, "index.json")
         }
         "search" => {
             let index_path = args.next().ok_or_else(|| {

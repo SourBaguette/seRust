@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -7,10 +7,10 @@ pub type TermFreq = HashMap<String, usize>;
 pub type DocFreq = HashMap<String, usize>;
 pub type TermFreqPerDoc = HashMap<PathBuf, TermFreq>;
 
-#[derive(Deserialize)]
+#[derive(Default, Deserialize, Serialize)]
 pub struct Model {
-    tfpd: TermFreqPerDoc,
-    df: DocFreq,
+    pub tfpd: TermFreqPerDoc,
+    pub df: DocFreq,
 }
 
 pub fn tf(t: &str, d: &TermFreq) -> f32 {
