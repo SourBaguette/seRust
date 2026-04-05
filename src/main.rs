@@ -225,6 +225,15 @@ fn tf(t: &str, d: &TermFreq) -> f32 {
     a / b
 }
 
+fn tf_idf(t: &str, d: &TermFreqIndex) -> f32 {
+    // n = total number of documents
+    // m = total number of documents where the term 't' appears
+    let n = d.len() as f32;
+    let m = d.values().filter(|tf| tf.contains_key(t)).count() as f32;
+
+    return n / m;
+}
+
 fn serve_request(tf_index: &TermFreqIndex, mut request: Request) -> Result<(), ()> {
     println!(
         "INFO: received request! method: {:?}, url: {:?}",
