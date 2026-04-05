@@ -2,7 +2,14 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 pub type TermFreq = HashMap<String, usize>;
-pub type TermFreqIndex = HashMap<PathBuf, TermFreq>;
+// In how many documents does the specific term appear
+pub type DocFreq = HashMap<String, usize>;
+pub type TermFreqPerDoc = HashMap<PathBuf, TermFreq>;
+
+struct Model {
+    tfpd: TermFreqPerDoc,
+    df: DocFreq,
+}
 
 pub fn tf(t: &str, d: &TermFreq) -> f32 {
     let a = d.get(t).cloned().unwrap_or(0) as f32;
@@ -10,7 +17,7 @@ pub fn tf(t: &str, d: &TermFreq) -> f32 {
     a / b
 }
 
-pub fn idf(t: &str, d: &TermFreqIndex) -> f32 {
+pub fn idf(t: &str, d: &TermFreqPerDoc) -> f32 {
     let n = d.len() as f32;
     let m = d.values().filter(|tf| tf.contains_key(t)).count().max(1) as f32;
     return (n / m).log10();
@@ -79,7 +86,7 @@ impl<'a> Iterator for Lexer<'a> {
     }
 }
 
-pub fn search_query<'a>(tf_index: &'a TermFreqIndex, query: &'a [char]) -> Vec<(&'a Path, f32)> {
+pub fn search_query<'a>(tf_index: &'a TermFreqPerDoc, query: &'a [char]) -> Vec<(&'a Path, f32)> {
     let mut result = Vec::<(&Path, f32)>::new();
     let tokens = Lexer::new(&query).collect::<Vec<_>>();
     for (path, tf_table) in tf_index {

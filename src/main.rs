@@ -40,7 +40,7 @@ fn parse_entire_xml_file(file_path: &Path) -> Result<String, ()> {
 }
 
 // TODO: Use sqlite3 to store the index
-fn save_tf_index(tf_index: &TermFreqIndex, index_path: &str) -> Result<(), ()> {
+fn save_tf_index(tf_index: &TermFreqPerDoc, index_path: &str) -> Result<(), ()> {
     println!("Saving {index_path}...");
 
     let index_file = File::create(index_path).map_err(|err| {
@@ -54,7 +54,7 @@ fn save_tf_index(tf_index: &TermFreqIndex, index_path: &str) -> Result<(), ()> {
     Ok(())
 }
 
-fn tf_index_of_folder(dir_path: &Path, tf_index: &mut TermFreqIndex) -> Result<(), ()> {
+fn tf_index_of_folder(dir_path: &Path, tf_index: &mut TermFreqPerDoc) -> Result<(), ()> {
     let dir = fs::read_dir(dir_path).map_err(|err| {
         eprintln!(
             "ERROR: could not open directory {dir_path} for indexing: {err}",
@@ -135,7 +135,7 @@ fn entry() -> Result<(), ()> {
                 eprintln!("ERROR: no directory is provided for {subcommand} subcommand");
             })?;
 
-            let mut tf_index = TermFreqIndex::new();
+            let mut tf_index = TermFreqPerDoc::new();
             tf_index_of_folder(Path::new(&dir_path), &mut tf_index)?;
 
             save_tf_index(&tf_index, "index.json")
@@ -159,7 +159,7 @@ fn entry() -> Result<(), ()> {
                 eprintln!("ERROR: could not open index file {index_path}: {err}");
             })?;
 
-            let tf_index: TermFreqIndex = serde_json::from_reader(index_file).map_err(|err| {
+            let tf_index: TermFreqPerDoc = serde_json::from_reader(index_file).map_err(|err| {
                 eprintln!("ERROR: could not parse index file {index_path}: {err}");
             })?;
 
@@ -179,7 +179,7 @@ fn entry() -> Result<(), ()> {
                 eprintln!("ERROR: could not open index file {index_path}: {err}");
             })?;
 
-            let tf_index: TermFreqIndex = serde_json::from_reader(index_file).map_err(|err| {
+            let tf_index: TermFreqPerDoc = serde_json::from_reader(index_file).map_err(|err| {
                 eprintln!("ERROR: could not parse index file {index_path}: {err}");
             })?;
 

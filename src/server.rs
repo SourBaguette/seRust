@@ -37,7 +37,7 @@ fn serve_static_file(request: Request, file_path: &str, content_type: &str) -> i
     request.respond(Response::from_file(file).with_header(content_type_header))
 }
 
-fn serve_api_search(tf_index: &TermFreqIndex, mut request: Request) -> io::Result<()> {
+fn serve_api_search(tf_index: &TermFreqPerDoc, mut request: Request) -> io::Result<()> {
     let mut buf = Vec::new();
     if let Err(err) = request.as_reader().read_to_end(&mut buf) {
         eprintln!("ERROR: could not read the body of the request: {err}");
@@ -67,7 +67,7 @@ fn serve_api_search(tf_index: &TermFreqIndex, mut request: Request) -> io::Resul
     request.respond(Response::from_string(&json).with_header(content_type_header))
 }
 
-fn serve_request(tf_index: &TermFreqIndex, request: Request) -> io::Result<()> {
+fn serve_request(tf_index: &TermFreqPerDoc, request: Request) -> io::Result<()> {
     println!(
         "INFO: received request! method: {:?}, url: {:?}",
         request.method(),
@@ -86,7 +86,7 @@ fn serve_request(tf_index: &TermFreqIndex, request: Request) -> io::Result<()> {
     }
 }
 
-pub fn start(address: &str, tf_index: &TermFreqIndex) -> Result<(), ()> {
+pub fn start(address: &str, tf_index: &TermFreqPerDoc) -> Result<(), ()> {
     let server = Server::http(&address).map_err(|err| {
         eprintln!("ERROR: could not start HTTP server at {address}: {err}");
     })?;
