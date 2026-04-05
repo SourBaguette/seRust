@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 pub type TermFreq = HashMap<String, usize>;
 // In how many documents does the specific term appear
 pub type DocFreq = HashMap<String, usize>;
+// usize here is the number of unique terms in the particular document
 pub type TermFreqPerDoc = HashMap<PathBuf, (usize, TermFreq)>;
 
 #[derive(Default, Deserialize, Serialize)]
